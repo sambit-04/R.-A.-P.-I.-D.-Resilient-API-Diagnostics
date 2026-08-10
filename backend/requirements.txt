@@ -1,0 +1,14 @@
+﻿Flask>=2.0
+Flask-Cors
+Flask-JWT-Extended
+flask-socketio
+eventlet
+cryptography
+bcrypt
+requests
+aiohttp
+reportlab
+pytest
+pytest-cov
+pytest-asyncio
+pytest-mock
