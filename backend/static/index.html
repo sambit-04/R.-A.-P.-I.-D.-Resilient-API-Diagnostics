@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>R. A. P. I. D. — Backend Terminal</title>
+
+  <!-- Styles: dark hacker aesthetic -->
+  <style>
+    :root{
+      --bg:#05060a;
+      --panel:#0b0f14;
+      --muted:#7b8a99;
+      --glass: rgba(255,255,255,0.03);
+      --accent:#00E7FF;
+      --accent-2:#39FF14;
+      --danger:#FF6B6B;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+      --glass-border: rgba(255,255,255,0.04);
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#02040a 0%, #071017 100%);font-family:var(--mono);color:#c9d1d9;}
+    .wrap{max-width:1200px;margin:24px auto;padding:18px;display:grid;grid-template-columns: 380px 1fr;gap:18px;}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:56px;height:56px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,rgba(0,231,255,0.08), rgba(57,255,20,0.03));
+      border:1px solid rgba(0,231,255,0.12);box-shadow: 0 6px 20px rgba(2,8,23,0.6);
+      color:var(--accent);font-weight:700;font-size:18px;
+    }
+    h1{margin:0;font-size:18px;color:var(--accent)}
+    .sub{color:var(--muted);font-size:12px}
+
+    /* left panel */
+    .panel{background:var(--panel);border-radius:12px;padding:14px;box-shadow: 0 8px 30px rgba(2,8,23,0.6);border:1px solid var(--glass-border)}
+    .section-title{font-size:13px;color:var(--muted);margin-bottom:10px}
+    .stat{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .stat .num{font-size:20px;color:var(--accent);font-weight:700}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    .pill{background:var(--glass);padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
+
+    /* tests list */
+    .tests-list{display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow:auto;padding-right:6px}
+    .test-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(255,255,255,0.02)}
+    .t-left{max-width:70%}
+    .t-name{font-size:13px;color:#e6f7fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .t-meta{font-size:11px;color:var(--muted);margin-top:6px}
+    .status-badge{padding:6px 8px;border-radius:8px;font-weight:700;font-size:11px}
+    .badge-running{background:linear-gradient(90deg,#08222a,#05303c);color:#8ffcf7;border:1px solid rgba(0,231,255,0.06)}
+    .badge-completed{background:linear-gradient(90deg,#06220a,#103314);color:var(--accent-2);border:1px solid rgba(57,255,20,0.06)}
+    .badge-failed{background:linear-gradient(90deg,#2b0a0a,#3a0d0d);color:var(--danger);border:1px solid rgba(255,107,107,0.06)}
+
+    .progress{height:8px;background:#071018;border-radius:999px;margin-top:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
+    .progress > div{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width 0.4s ease}
+
+    /* terminal */
+    .terminal-wrap{display:flex;flex-direction:column;height:80vh;border-radius:12px;overflow:hidden}
+    .term-header{display:flex;align-items:center;gap:10px;padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border-bottom:1px solid rgba(255,255,255,0.02)}
+    .dots{display:flex;gap:8px}
+    .dot{width:12px;height:12px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+    .dot.r{background:#FF5F56}
+    .dot.y{background:#FFBD2E}
+    .dot.g{background:#27C93F}
+    .term-body{flex:1;padding:18px;background:linear-gradient(180deg,#070a0f,#041016);overflow:auto;color:#cfeff3}
+    .log-line{font-size:13px;line-height:1.45;white-space:pre-wrap}
+    .log-time{color:var(--muted);margin-right:8px;font-size:12px}
+    .log-info{color:#9beffd}
+    .log-ok{color:var(--accent-2)}
+    .log-err{color:var(--danger)}
+    .log-debug{color:#9fa8ff}
+
+    /* footer / small note */
+    .term-footer{padding:10px;border-top:1px solid rgba(255,255,255,0.02);background:linear-gradient(180deg,rgba(0,0,0,0), rgba(255,255,255,0.01));display:flex;justify-content:space-between;align-items:center}
+    .small-muted{color:var(--muted);font-size:12px}
+
+    /* typing caret */
+    .caret{display:inline-block;width:8px;height:16px;background:var(--accent);margin-left:6px;border-radius:2px;opacity:0.9;animation:blink 1s steps(2,start) infinite}
+    @keyframes blink{50%{opacity:0}}
+
+    /* responsive */
+    @media (max-width:920px){
+      .wrap{grid-template-columns:1fr; padding:10px}
+      .panel{order:2}
+      .terminal-wrap{order:1;height:66vh}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="header">
+        <div class="brand">
+          <div class="logo">RAPID</div>
+          <div>
+            <h1>R. A. P. I. D.</h1>
+            <div class="sub">Resilient API Diagnostics</div>
+          </div>
+        </div>
+        <div class="pill">backend</div>
+      </div>
+
+      <div style="margin-top:12px;" class="section">
+        <div class="section-title">Live Stats</div>
+        <div class="stat">
+          <div>
+            <div class="num" id="stat-total">--</div>
+            <div class="sub">Total tests</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:12px;color:var(--muted)">Server:</div>
+            <div style="font-size:13px;color:#9beffd">127.0.0.1:5000</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="section-title">Recent Tests</div>
+          <div class="tests-list" id="tests-list">
+            <!-- items appended by JS -->
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="section-title">Quick info</div>
+          <div class="sub small-muted">This panel is read-only. The terminal below will show step-by-step logs when tests run from the frontend.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="terminal-wrap panel">
+      <div class="term-header">
+        <div class="dots">
+          <div class="dot r"></div>
+          <div class="dot y"></div>
+          <div class="dot g"></div>
+        </div>
+        <div style="margin-left:12px;color:var(--muted);font-size:13px">Live Terminal — system logs & test details</div>
+        <div style="margin-left:auto" class="small-muted">Auto-updating · Read-only view</div>
+      </div>
+
+      <div id="term" class="term-body" aria-live="polite">
+        <!-- log lines appended here -->
+        <div class="log-line log-debug"><span class="log-time">[boot]</span> backend terminal ready — waiting for tests</div>
+      </div>
+
+      <div class="term-footer">
+        <div class="small-muted">Auto-refresh every 2s · Last update: <span id="last-update">--:--:--</span></div>
+        <div class="small-muted">Tip: trigger tests from front-end to see live logs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client JS: polls /api/history and /api/status and updates terminal -->
+  <script>
+    (function(){
+      const term = document.getElementById('term');
+      const testsList = document.getElementById('tests-list');
+      const lastUpdateEl = document.getElementById('last-update');
+      const statTotalEl = document.getElementById('stat-total');
+
+      // keep track of seen tasks to avoid duplicate log lines
+      const seen = new Map(); // id -> {status, progress}
+      const pollInterval = 2000; // ms
+      const statusPollInterval = 1500; // ms
+
+      function nowTime(){ return new Date().toLocaleTimeString(); }
+
+      function appendLog(type, text){
+        const div = document.createElement('div');
+        div.className = 'log-line ' + (type==='ok' ? 'log-ok' : (type==='err' ? 'log-err' : (type==='debug' ? 'log-debug' : 'log-info')));
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = '[' + nowTime() + ']';
+        div.appendChild(time);
+        const span = document.createElement('span');
+        span.innerHTML = ' ' + text;
+        div.appendChild(span);
+        term.appendChild(div);
+        term.scrollTop = term.scrollHeight;
+      }
+
+      function createTestItem(t){
+        const outer = document.createElement('div');
+        outer.className = 'test-item';
+        outer.id = 'test-'+t.id;
+
+        const left = document.createElement('div');
+        left.className = 't-left';
+        const title = document.createElement('div');
+        title.className = 't-name';
+        title.textContent = t.url;
+        const meta = document.createElement('div');
+        meta.className = 't-meta';
+        meta.textContent = t.type + ' • ' + (new Date(t.created_at).toLocaleString());
+        left.appendChild(title);
+        left.appendChild(meta);
+
+        const right = document.createElement('div');
+        right.style.textAlign = 'right';
+        const badge = document.createElement('div');
+        badge.className = 'status-badge';
+        if(t.status === 'running') badge.classList.add('badge-running'), badge.textContent='RUNNING';
+        else if(t.status === 'completed') badge.classList.add('badge-completed'), badge.textContent='COMPLETED';
+        else badge.classList.add('badge-failed'), badge.textContent='FAILED';
+        right.appendChild(badge);
+
+        const prog = document.createElement('div');
+        prog.className = 'progress';
+        prog.style.marginTop='8px';
+        const pfill = document.createElement('div');
+        pfill.style.width = t.progress ? (t.progress + '%') : '0%';
+        prog.appendChild(pfill);
+
+        outer.appendChild(left);
+        outer.appendChild(right);
+        outer.appendChild(prog);
+        return outer;
+      }
+
+      async function fetchHistory(){
+        try{
+          const res = await fetch('/api/history');
+          if(!res.ok) throw res;
+          const data = await res.json();
+          statTotalEl.textContent = data.length;
+          // build list and detect new entries
+          data.slice(0,50).forEach(item => {
+            if(!seen.has(item.id)){
+              // new record
+              seen.set(item.id, {status:item.status, progress: item.progress || 0});
+              appendLog('debug', `Recorded test ${item.id} — ${item.type} on ${item.url}`);
+              appendLog(item.status === 'failed' ? 'err' : (item.status === 'completed' ? 'ok' : 'info'),
+                        `Test ${item.id} (${item.type}) status: ${item.status}`);
+              // add to tests list
+              const node = createTestItem({...item, progress:0});
+              testsList.prepend(node);
+              // if running, start polling its status
+              if(item.status === 'running'){ pollStatus(item.id); }
+              // try to fetch result if completed
+              if(item.status === 'completed'){
+                fetchResultAndAppend(item.id);
+              }
+            } else {
+              // update existing item UI if present
+              const prev = seen.get(item.id);
+              if(prev.status !== item.status){
+                seen.set(item.id, {...prev, status: item.status});
+                appendLog('info', `Status change: ${item.id} → ${item.status}`);
+                const node = document.getElementById('test-'+item.id);
+                if(node){
+                  const badge = node.querySelector('.status-badge');
+                  badge.className = 'status-badge';
+                  if(item.status === 'running'){ badge.classList.add('badge-running'); badge.textContent='RUNNING'; pollStatus(item.id); }
+                  else if(item.status === 'completed'){ badge.classList.add('badge-completed'); badge.textContent='COMPLETED'; fetchResultAndAppend(item.id); }
+                  else { badge.classList.add('badge-failed'); badge.textContent='FAILED'; }
+                }
+              }
+            }
+          });
+          lastUpdateEl.textContent = nowTime();
+        }catch(err){
+          appendLog('err', 'Failed to fetch history: network error');
+        }
+      }
+
+      async function pollStatus(id){
+        // avoid multiple pollers for same id
+        if(window['__polling_'+id]) return;
+        window['__polling_'+id] = true;
+        try{
+          while(true){
+            await new Promise(r => setTimeout(r, statusPollInterval));
+            const r = await fetch('/api/status/'+id);
+            if(!r.ok){ appendLog('err', `status fetch ${id} failed`); break; }
+            const s = await r.json();
+            const prev = seen.get(id) || {};
+            if(s.progress !== undefined && prev.progress !== s.progress){
+              seen.set(id, {...prev, progress: s.progress});
+              appendLog('debug', `Progress ${id}: ${s.progress}%`);
+              const node = document.getElementById('test-'+id);
+              if(node){
+                const bar = node.querySelector('.progress > div');
+                if(bar) bar.style.width = (s.progress + '%');
+              }
+            }
+            if(s.status && s.status !== 'running'){
+              seen.set(id, {...(seen.get(id)||{}), status: s.status, progress: s.progress});
+              appendLog(s.status === 'completed' ? 'ok' : 'err', `Test ${id} ${s.status}`);
+              // fetch final result if completed
+              if(s.status === 'completed') await fetchResultAndAppend(id);
+              break;
+            }
+          }
+        }catch(e){
+          appendLog('err', `Status poll ${id} error`);
+        } finally {
+          window['__polling_'+id]=false;
+        }
+      }
+
+      async function fetchResultAndAppend(id){
+        try{
+          const r = await fetch('/api/result/'+id);
+          if(!r.ok) { appendLog('err', `Failed fetching result for ${id}`); return; }
+          const res = await r.json();
+          appendLog('info', `Result ${id}: ${JSON.stringify(res, null, 2).slice(0,500)}`);
+        }catch(e){
+          appendLog('err', `Error fetching result ${id}`);
+        }
+      }
+
+      // initial poll + periodic poll
+      fetchHistory();
+      setInterval(fetchHistory, pollInterval);
+
+      // compact startup lines
+      appendLog('debug', 'Admin terminal initialized');
+      appendLog('info', 'Polling /api/history every 2s — tests appear automatically when created');
+
+      // expose for debugging in console
+      window.RAPID = { appendLog, seen };
+
+    })();
+  </script>
+</body>
+</html>
